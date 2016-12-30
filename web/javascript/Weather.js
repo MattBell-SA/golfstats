@@ -8,23 +8,6 @@ function getWeather() {
         "https://query.yahooapis.com/v1/public/yql?q=" +
         "select+*+from+weather.forecast+where+woeid=1099805 and u='c'" + "&format=json";
 
-/*
-        var weatherList = new XMLHttpRequest();
-
-        weatherList.onreadystatechange = function() {
-           if (weatherList.readyState === 4 && weatherList.status === 200) {
-                   // Save the resonseText for later use
-                  usersRespObj.value = weatherList.responseText;
-                  alert(usersRespObj.value);
-           }
-        };
-
-        // The "true" flag means it is an asynchronous request
-        weatherList.open("GET", queryString, true);
-        weatherList.send();
-        */
-    
-
     $.getJSON(queryString, function (results) {
         if (results.query.count > 0) {
             var weather = results.query.results.channel;

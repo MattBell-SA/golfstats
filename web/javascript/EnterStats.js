@@ -28,19 +28,15 @@
                 document.getElementById("temp").value = golf.temp;
                 document.getElementById("wind").value = golf.wind;
                 alert("Data saved");
-           // }).catch(function (error) {
-           //     alert("Oops: " + error);
-          //  }).finally(function () {
-          //      db.close(); // Close or delete database before connection goes out of scope.
             });
         }
 
         function viewGolfStats() {
-            window.location.href = "ViewGolfStats.html";
+            window.location.href = "./enter_stats/enterstats.jsp";
         }
 
         function viewGolfCourses() {
-            window.location.href = "courseNavigation.html";
+            window.location.href = "./findCourse/courseNavigation.html";
         }
 
         function loadWindow() {
@@ -52,10 +48,6 @@
                 if (golfCourse != null) {
                     document.getElementById("StatsCourseName").value = golfCourse.placeName;
                 }
-           // }).catch(function (error) {
-           //     alert("Oops: " + error);
-           // }).finally(function () {
-           //     db.close(); // Close or delete database before connection goes out of scope.
             });
 
           var scoreSelect = document.getElementById('StatsScore');

@@ -146,15 +146,7 @@ function createMarker(place) {
           }).then(function () {
               return db.golfCourse.get(1);
           }).then(function (golfCourse) {
-              //alert(golfCourse.placeName);
-          //}).catch(function (error) {
-          //    alert("Oops: " + error);
-          //}).finally(function () {
-          //    db.close(); // Close or delete database before connection goes out of scope.
           });
-
-
-
 
           // display route on map from the current position to selected golf course/store
           if (directionsDisplay == null) {
