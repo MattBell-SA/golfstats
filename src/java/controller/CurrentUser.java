@@ -214,7 +214,6 @@ public final class CurrentUser {
             int places = 2;
             bd = new BigDecimal(value);
             bd = bd.setScale(places, RoundingMode.HALF_UP);
-            //bd = bd.setScale(places);
             return bd.doubleValue();
         }
         
