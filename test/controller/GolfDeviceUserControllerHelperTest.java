@@ -31,7 +31,7 @@ public class GolfDeviceUserControllerHelperTest {
     }
     
     /**
-     * Test of runRequest("saveUserDetails") method, of class GolfUserControllerHelper.
+     * Test of runRequest("DeviceCreateUser") method, of class GolfDeviceUserControllerHelper.
      */
     @Test
     public void testDeviceCreateUser() {
@@ -91,7 +91,7 @@ public class GolfDeviceUserControllerHelperTest {
     }
 
     /**
-     * Test of runRequest("deleteUserDetails") method, of class GolfUserControllerHelper.
+     * Test of runRequest("DeviceLogOn") method, of class GolfDeviceUserControllerHelper.
      */
     @Test
     public void testDeviceLogOn() {

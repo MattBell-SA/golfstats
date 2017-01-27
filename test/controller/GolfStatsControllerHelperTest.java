@@ -34,7 +34,7 @@ public class GolfStatsControllerHelperTest {
     }
 
     /**
-     * Test of runRequest("saveUserDetails") method, of class GolfUserControllerHelper.
+     * Test of runRequest("saveStatsDetails") method, of class GolfStatsControllerHelper.
      */
     @Test
     public void testNewStatDetails() {
@@ -137,7 +137,7 @@ public class GolfStatsControllerHelperTest {
     }
 
     /**
-     * Test of runRequest("saveUserDetails") method, of class GolfUserControllerHelper.
+     * Test of runRequest("saveStatsDetails") method, of class GolfStatsControllerHelper.
      */
     @Test
     public void testUpdateStatsDetails() {
