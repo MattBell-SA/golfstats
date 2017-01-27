@@ -19,6 +19,9 @@ public abstract class HelperBase {
     protected abstract void copyFromSession(Object sessionHelper);
     
     public void addHelperToSession(String name, SessionData state) {
+        if (request == null) {
+            return;
+        }
         if(SessionData.READ == state) {
             Object sessionObj = request.getSession().getAttribute(name);
             if(sessionObj != null) {

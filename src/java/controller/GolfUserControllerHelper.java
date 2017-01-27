@@ -1,12 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package controller;
 
-import static controller.CurrentUser.golfCurrentUserDetailsError;
 import golfdetails.CreateEntityManager;
+import golfdetails.GolfStats;
+import golfdetails.GolfStatsAverage;
 import golfdetails.GolfUser;
 import golfdetails.GolfUserJpaController;
 import java.io.IOException;
@@ -20,27 +16,90 @@ import javax.servlet.http.HttpServletResponse;
 
 public class GolfUserControllerHelper extends HelperBase{
     
-    protected GolfUser golfUserDetails = new GolfUser();
-    String unit_name = "GolfStatsApplicationJSPPU";
+    private GolfUser golfUserDetails = new GolfUser();
+    private GolfUserControllerData golfUserControllerData = new GolfUserControllerData();
+    private String unit_name = "GolfStatsApplicationJSPPU";
+    private List<GolfUser> golfUserList = null;
+    private List<GolfStats> golfStatsList = null;
+    private GolfStatsAverage golfStatsTop10Average = null;
+    
+    public List<GolfUser> getGolfUserList() {
+        return golfUserList;
+    }
     
     public GolfUserControllerHelper (HttpServletRequest request, HttpServletResponse response) {
         super(request, response);
-    } 
+        golfUserControllerData.getRequestDetails(request);
+     } 
     
     public Object getData() {
         return golfUserDetails;
     }
     
+    public void setGolfUserDetails(GolfUser golfUserDetails) {
+        this.golfUserDetails = golfUserDetails;
+    }
+    
+    public GolfUserControllerData getGolfUserControllerData() {
+        return golfUserControllerData;
+    }
+
+    public void setGolfUserControllerData(GolfUserControllerData golfUserControllerData) {
+        this.golfUserControllerData = golfUserControllerData;
+    }    
+
+    public boolean isValidateCurrentUser(String operation)  {
+      if ((CurrentUser.getCurrentUser() == null) && 
+         (("editUserDetails".equals(operation)) 
+         || ("deleteUserDetails".equals(operation))
+         || ("viewAllUserDetails".equals(operation)))) {
+        return true;
+      }  
+      return false;
+    }
+    
+    public String runRequest(String operation) {
+        String page = "";
+        
+        switch (operation) {
+            case "newUserDetails":
+                page = newUserDetails();
+                break;
+            case "editUserDetails":
+                page = editUserDetails();
+                break;
+            case "saveUserDetails":
+                page = saveUserDetails(); 
+                break;
+            case "deleteUserDetails":
+                page = deleteUserDetails(); 
+                break;
+            case "viewAllUserDetails":
+                page = viewUserDetails();    
+                break;
+            case "editUserBack":  
+                page = displayHomePage(); 
+                break;
+            case "displayHomePage": 
+                page = displayHomePage(); 
+                break;
+            case "LogOn":  
+                page = logOnAsCurrentUser(); 
+                break;
+            default:
+                page = displayHomePage(); 
+        }
+        
+        return page;    
+    }
+
     protected void doGet() throws ServletException, IOException {
         
         String address = "";
+        String errorMsg = "";
+        String operation = golfUserControllerData.getOperation();
         
-        String errorMsg = "n";
-        
-        if ((CurrentUser.getCurrentUser() == null) && 
-                ( (request.getParameter("editUserDetails") != null) 
-                || (request.getParameter("deleteUserDetails") != null) 
-                || (request.getParameter("viewAllUserDetails") != null) )) {
+        if (isValidateCurrentUser(operation)) {
             address = displayHomePage();
             errorMsg = "**No current user";
             // add the error message to the session
@@ -48,41 +107,34 @@ public class GolfUserControllerHelper extends HelperBase{
             RequestDispatcher dispatcher2 = request.getRequestDispatcher(address);
             dispatcher2.forward(request, response);            
             return;
-        }  
+        } 
         
+        if (CurrentUser.getCurrentUser() == null) {
+          CurrentUser.setCurrentUser(golfUserControllerData.getUserName(), golfUserControllerData.getUserPwd());
+            
+          // add the current user to the session
+          request.getSession().setAttribute(golfCurrentUserDetailsHelper(), CurrentUser.golfUserDetails);
+          
+          // if its still null add a message to the session
+          if (CurrentUser.getCurrentUser() == null) {
+            // add the error message to the session
+            request.getSession().setAttribute(golfCurrentUserDetailsError(), CurrentUser.getErrorMessage());
+          }
+         }
+
         addHelperToSession(golfUserDetailsHelper(), SessionData.READ);
        
-        if (request.getParameter("newUserDetails") != null)  {
-            address = newUserDetails();
-        } 
+        address = runRequest(operation);
+
+        // add list to the request
+        request.setAttribute(golfUserDetailsList(), getGolfUserList());
         
-        if (request.getParameter("editUserDetails") != null)  {
-            address = editUserDetails();
-        } 
+        // add averages to the request
+        request.setAttribute(golfStatsTop10AverageDetails(), golfStatsTop10Average);
         
-        if (request.getParameter("saveUserDetails") != null)  {
-            address = saveUserDetails();            
-        }
+        // add list to the request
+        request.setAttribute(golfStatsTop10DetailsList(), golfStatsList);    
         
-        if (request.getParameter("deleteUserDetails") != null)  {
-            address = deleteUserDetails();            
-        }
-        
-        if (request.getParameter("viewAllUserDetails") != null)  {
-            address = viewUserDetails();            
-        }
-        
-        if (request.getParameter("editUserBack") != null)  {
-            address = displayHomePage();            
-        }
-        
-        if (request.getParameter("displayHomePage") != null)  {
-            address = displayHomePage();            
-        }
-        
-        if (request.getParameter("LogOn") != null)  {
-            address = logOnAsCurrentUser();            
-        } 
 
         RequestDispatcher dispatcher = request.getRequestDispatcher(address);
         dispatcher.forward(request, response);
@@ -100,10 +152,11 @@ public class GolfUserControllerHelper extends HelperBase{
     }
     
     public String logOnAsCurrentUser() {
-        boolean success = CurrentUser.setCurrentUser(request);
+        boolean success = CurrentUser.setCurrentUser(golfUserControllerData.getUserName(), golfUserControllerData.getUserPwd());
 
         if (success) {
-            CurrentUser.viewTop10StatsDetails(request);
+            golfStatsList = CurrentUser.viewTop10StatsDetails();
+            golfStatsTop10Average = CurrentUser.viewGolfStatsAverage(golfStatsList);
             return displayEnterStatsPage();
         } else {
           return displayHomePage();
@@ -122,7 +175,7 @@ public class GolfUserControllerHelper extends HelperBase{
         EntityTransaction etx = em.getTransaction();
         GolfUserJpaController golfUser = new GolfUserJpaController(em.getEntityManagerFactory());         
         
-        golfUserDetails = golfUser.findGolfUser(new Integer(request.getParameter("UserID")));
+        golfUserDetails = golfUser.findGolfUser(new Integer(golfUserControllerData.getUserID()));
         addHelperToSession(golfUserDetailsHelper(), SessionData.IGNORE);
         return displayEditUserPage();
     }
@@ -130,16 +183,16 @@ public class GolfUserControllerHelper extends HelperBase{
     public String saveUserDetails() {
         String address = "";
         try {
-          golfUserDetails.setUserId(new Integer(request.getParameter("UserID")));
+          golfUserDetails.setUserId(new Integer(golfUserControllerData.getUserID()));
         } catch(NumberFormatException e) {
           golfUserDetails.setUserId(null);
         }
-        golfUserDetails.setUserEmail(request.getParameter("UserEmail"));
-        golfUserDetails.setUserFirstName(request.getParameter("UserFirstName"));
-        golfUserDetails.setUserLastName(request.getParameter("UserLastName"));
-        golfUserDetails.setUserName(request.getParameter("UserName"));
-        golfUserDetails.setUserPwd(request.getParameter("UserPwd"));
-        golfUserDetails.setUserRole(request.getParameter("UserRole"));
+        golfUserDetails.setUserEmail(golfUserControllerData.getUserEmail());
+        golfUserDetails.setUserFirstName(golfUserControllerData.getUserFirstName());
+        golfUserDetails.setUserLastName(golfUserControllerData.getUserLastName());
+        golfUserDetails.setUserName(golfUserControllerData.getUserName());
+        golfUserDetails.setUserPwd(golfUserControllerData.getUserPwd());
+        golfUserDetails.setUserRole(golfUserControllerData.getUserRole());
         addHelperToSession(golfUserDetailsHelper(), SessionData.IGNORE);
 
         EntityManager em = CreateEntityManager.getEntityManager();
@@ -174,14 +227,11 @@ public class GolfUserControllerHelper extends HelperBase{
           EntityTransaction etx = em.getTransaction();
           GolfUserJpaController golfUserJPA = new GolfUserJpaController(em.getEntityManagerFactory());         
 
-          List<GolfUser> golfUserList = golfUserJPA.findGolfUserEntities();
+          golfUserList = golfUserJPA.findGolfUserEntities();
           for (GolfUser golfUser : golfUserList) {
                System.out.println(golfUser.getUserName());
           }
           
-          // add list to the request
-          request.setAttribute(golfUserDetailsList(), golfUserList);
-        
         return viewAllUserDetails();
     }
     
@@ -231,6 +281,22 @@ public class GolfUserControllerHelper extends HelperBase{
 
     public String golfUserDetailsList() {
         return "golfUserDetailsList";
+    }
+    
+    public static String golfStatsTop10DetailsList() {
+        return "golfStatsTop10DetailsList";
+    }
+    
+    public static String golfStatsTop10AverageDetails() {
+        return "golfStatsTop10AverageDetails";
+    } 
+    
+    public static String golfCurrentUserDetailsHelper() {
+        return "golfCurrentUserDetailsHelper";
+    }
+    
+    public static String golfCurrentUserDetailsError() {
+        return "golfCurrentUserDetailsError";
     }
     
 }

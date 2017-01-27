@@ -1,9 +1,8 @@
 package controller;
 
-import controller.CurrentUser.GolfStatsAverage;
-import static controller.CurrentUser.golfCurrentUserDetailsError;
 import golfdetails.CreateEntityManager;
 import golfdetails.GolfStats;
+import golfdetails.GolfStatsAverage;
 import golfdetails.GolfStatsJpaController;
 import golfdetails.GolfUser;
 import golfdetails.GolfUserJpaController;
@@ -21,21 +20,86 @@ import javax.servlet.http.HttpServletResponse;
 
 public class GolfStatsControllerHelper extends HelperBase{
     
-    protected GolfStats golfStatsDetails = new GolfStats();
-    String unit_name = "GolfStatsApplicationJSPPU";
+    private GolfStats golfStatsDetails = new GolfStats();
+    private String unit_name = "GolfStatsApplicationJSPPU";
+    private List<GolfStats> golfStatsTop10List = null;
+    private GolfStatsAverage golfStatsTop10Average = null;
+    private List<GolfStats> golfStatsAllList = null;
+    private GolfStatsAverage golfStatsAllAverage = null;
+    private GolfStatsControllerData golfStatsControllerData = new GolfStatsControllerData();
+    private GolfUser golfUser = null;
     
     public GolfStatsControllerHelper (HttpServletRequest request, HttpServletResponse response) {
         super(request, response);
+        golfStatsControllerData.getRequestDetails(request);
     } 
     
     public Object getData() {
         return golfStatsDetails;
     }
     
+    public GolfStatsControllerData getGolfStatsControllerData() {
+        return golfStatsControllerData;
+    }
+
+    public void setGolfStatsControllerData(GolfStatsControllerData golfStatsControllerData) {
+        this.golfStatsControllerData = golfStatsControllerData;
+    }
+
+    public GolfUser getGolfUser() {
+        return golfUser;
+    }
+
+    public void setGolfUser(GolfUser golfUser) {
+        this.golfUser = golfUser;
+    }
+    
+    public String runRequest(String operation) {
+        
+        String page = "";
+        
+        switch (operation) {
+            case "newStatsDetails":
+                page = newStatsDetails();
+                break;
+            case "editStatsDetails":
+                page = editStatsDetails();
+                break;
+            case "saveStatsDetails":
+                page = saveStatsDetails(); 
+                break;
+            case "saveStatsDetailsBackViewAll":
+                saveStatsDetails(); 
+                page = viewStatsDetails(); 
+                break;
+            case "deleteStatsDetails":
+                page = deleteStatsDetails();    
+                break;
+            case "viewAllStatsDetails":  
+                page = viewStatsDetails(); 
+                break;
+            case "editStatsBack": 
+                page = viewStatsDetails(); 
+                break;
+            case "displayHomePage":  
+                page = viewStatsDetails(); 
+                break;
+            case "logoff":  
+                CurrentUser.logOff();
+                page = displayHomePage();
+                break;
+            default:
+                page = displayHomePage(); 
+        }
+        
+        return page;
+    }    
+    
     protected void doGet() throws ServletException, IOException {
         
         String address = "";
         String errorMsg = "";
+        String operation = golfStatsControllerData.getOperation();
         
         if (CurrentUser.getCurrentUser() == null) {
             address = displayHomePage();
@@ -46,48 +110,27 @@ public class GolfStatsControllerHelper extends HelperBase{
             dispatcher2.forward(request, response);            
             return;
         }
-
+        
         addHelperToSession(golfStatsDetailsHelper(), SessionData.READ);
-       
-        if (request.getParameter("newStatsDetails") != null)  {
-            address = newStatsDetails();
-        } 
         
-        if (request.getParameter("editStatsDetails") != null)  {
-            address = editStatsDetails();
-        } 
+        golfUser = (GolfUser)request.getSession().getAttribute(golfCurrentUserDetailsHelper());
         
-        if (request.getParameter("saveStatsDetails") != null)  {
-            address = saveStatsDetails();            
-        }
+        address = runRequest(operation);
+
+        golfStatsTop10List = CurrentUser.viewTop10StatsDetails();
+        golfStatsTop10Average = CurrentUser.viewGolfStatsAverage(golfStatsTop10List);
         
-        if (request.getParameter("saveStatsDetailsBackViewAll") != null)  {
-            saveStatsDetails(); 
-            address = viewStatsDetails();  
-        }        
+        // add top 10 averages to the request
+        request.setAttribute(golfStatsTop10AverageDetails(), golfStatsTop10Average);
         
-        if (request.getParameter("deleteStatsDetails") != null)  {
-            address = deleteStatsDetails();            
-        }
-        
-        if (request.getParameter("viewAllStatsDetails") != null)  {
-            address = viewStatsDetails();            
-        }
-        
-        if (request.getParameter("editStatsBack") != null)  {
-            address = viewStatsDetails();            
-        }
-        
-        if (request.getParameter("displayHomePage") != null)  {
-            address = viewStatsDetails();            
-        }
-        
-        if (request.getParameter("logoff") != null)  {
-            address = displayHomePage(); 
-            CurrentUser.logOff();
-        }
-        
-        CurrentUser.viewTop10StatsDetails(request);
+        // add top 10 list to the request
+        request.setAttribute(golfStatsTop10DetailsList(), golfStatsTop10List);         
+    
+        // add all averages to the request
+        request.setAttribute(golfStatsAverageDetails(), golfStatsAllAverage);
+
+        // add all list to the request
+        request.setAttribute(golfStatsDetailsList(), golfStatsAllList);    
         
         RequestDispatcher dispatcher = request.getRequestDispatcher(address);
         dispatcher.forward(request, response);
@@ -115,16 +158,27 @@ public class GolfStatsControllerHelper extends HelperBase{
         EntityManager em = CreateEntityManager.getEntityManager();
         GolfStatsJpaController golfStats = new GolfStatsJpaController(em.getEntityManagerFactory());        
         
-        golfStatsDetails = golfStats.findGolfStats(new Integer(request.getParameter("StatsID")));
+        golfStatsDetails = golfStats.findGolfStats(new Integer(golfStatsControllerData.getStatsID()));
         addHelperToSession(golfStatsDetailsHelper(), SessionData.IGNORE);
         return displayEditStatsPage();
     }
+    
+    public void selectStatsDetails() {
+        EntityManager em = CreateEntityManager.getEntityManager();
+        GolfStatsJpaController golfStats = new GolfStatsJpaController(em.getEntityManagerFactory());        
+        try {
+            golfStatsDetails = golfStats.findGolfStats(new Integer(golfStatsControllerData.getStatsID()));
+        } catch(Exception e) {
+            System.out.println(e.getLocalizedMessage());
+        }
+        addHelperToSession(golfStatsDetailsHelper(), SessionData.IGNORE);
+    }    
 
     public String saveStatsDetails() {
         String address = "";
         // If no stats id is provided then we are inserting
         try {
-          golfStatsDetails.setStatsId(new Integer(request.getParameter("StatsID")));
+          golfStatsDetails.setStatsId(new Integer(golfStatsControllerData.getStatsID()));
         } catch(NumberFormatException e) {
           golfStatsDetails.setStatsId(null);
         }
@@ -133,21 +187,23 @@ public class GolfStatsControllerHelper extends HelperBase{
         EntityTransaction etx = em.getTransaction();
         GolfUserJpaController golfUserJPA = new GolfUserJpaController(em.getEntityManagerFactory());         
 
-        GolfUser golfUser = null;
+        GolfUser golfUserIn = null;
         
         try {
-          golfUser = golfUserJPA.findGolfUser(new Integer(request.getParameter("StatsUserID")));
+          golfUserIn = golfUserJPA.findGolfUser(new Integer(golfStatsControllerData.getStatsUserID()));
         } catch(NumberFormatException e) {
           golfStatsDetails.setStatsUserId(null);
         }
-        
+       
         // If a user was not passed in then this must be the current user
-       golfUser = (GolfUser)request.getSession().getAttribute(CurrentUser.golfCurrentUserDetailsHelper());
+        if (golfUserIn == null) {
+          golfUserIn = golfUser;
+        } 
         
-        golfStatsDetails.setStatsUserId(golfUser);
-        golfStatsDetails.setStatsCourseName(request.getParameter("StatsCourseName"));
+        golfStatsDetails.setStatsUserId(golfUserIn);
+        golfStatsDetails.setStatsCourseName(golfStatsControllerData.getStatsCourseName());
         
-        String time = request.getParameter("StatsDatetime");
+        String time = golfStatsControllerData.getStatsDatetime();
         
         String pattern = "dd/MM/yyyy";
         SimpleDateFormat format = new SimpleDateFormat(pattern);
@@ -169,14 +225,14 @@ public class GolfStatsControllerHelper extends HelperBase{
         }
 
         golfStatsDetails.setStatsDatetime(date);
-        golfStatsDetails.setStatsScore(new Integer(request.getParameter("StatsScore")));
-        golfStatsDetails.setStatsCompType(request.getParameter("StatsCompType"));
-        golfStatsDetails.setStatsPutts(new Integer(request.getParameter("StatsPutts")));
-        golfStatsDetails.setStatsGreens(new Integer(request.getParameter("StatsGreens")));
-        golfStatsDetails.setStatsFairways(new Integer(request.getParameter("StatsFairways")));
-        golfStatsDetails.setStatsTemp(new Double(request.getParameter("StatsTemp")));
-        golfStatsDetails.setStatsWind(new Double(request.getParameter("StatsWind")));
-        golfStatsDetails.setStatsCondition(request.getParameter("StatsCondition"));
+        golfStatsDetails.setStatsScore(new Integer(golfStatsControllerData.getStatsScore()));
+        golfStatsDetails.setStatsCompType(golfStatsControllerData.getStatsCompType());
+        golfStatsDetails.setStatsPutts(new Integer(golfStatsControllerData.getStatsPutts()));
+        golfStatsDetails.setStatsGreens(new Integer(golfStatsControllerData.getStatsGreens()));
+        golfStatsDetails.setStatsFairways(new Integer(golfStatsControllerData.getStatsFairways()));
+        golfStatsDetails.setStatsTemp(new Double(golfStatsControllerData.getStatsTemp()));
+        golfStatsDetails.setStatsWind(new Double(golfStatsControllerData.getStatsWind()));
+        golfStatsDetails.setStatsCondition(golfStatsControllerData.getStatsCondition());
         
         addHelperToSession(golfStatsDetailsHelper(), SessionData.IGNORE);
 
@@ -202,24 +258,9 @@ public class GolfStatsControllerHelper extends HelperBase{
     }
 
     public String viewStatsDetails() {
-        golfStatsDetails = new GolfStats();
-        addHelperToSession(golfStatsDetailsHelper(), SessionData.READ);
+        golfStatsAllList = CurrentUser.viewAllStatsDetails();
+        golfStatsAllAverage = CurrentUser.viewGolfStatsAverage(golfStatsAllList);
 
-        EntityManager em = CreateEntityManager.getEntityManager();
-        EntityTransaction etx = em.getTransaction();
-        GolfStatsJpaController golfStatsJPA = new GolfStatsJpaController(em.getEntityManagerFactory());          
-        
-
-        List<GolfStats> golfStatsList = golfStatsJPA.findGolfStatsByUserName(CurrentUser.getCurrentUser());
-        GolfStatsAverage golfStatsAverage = new GolfStatsAverage();
-        golfStatsAverage.setGolfStatsAverage(golfStatsList);
-
-        // add averages to the request
-        request.setAttribute(golfStatsAverageDetails(), golfStatsAverage);
-
-        // add list to the request
-        request.setAttribute(golfStatsDetailsList(), golfStatsList);
-        
         return viewAllStatsDetails();
     }
     
@@ -269,5 +310,21 @@ public class GolfStatsControllerHelper extends HelperBase{
     public static String golfStatsAverageDetails() {
         return "golfStatsAverageDetails";
     } 
+    
+    public static String golfCurrentUserDetailsError() {
+        return "golfCurrentUserDetailsError";
+    }
 
+    public static String golfStatsTop10DetailsList() {
+        return "golfStatsTop10DetailsList";
+    }
+    
+    public static String golfStatsTop10AverageDetails() {
+        return "golfStatsTop10AverageDetails";
+    } 
+    
+    
+    public static String golfCurrentUserDetailsHelper() {
+        return "golfCurrentUserDetailsHelper";
+    }
 }
