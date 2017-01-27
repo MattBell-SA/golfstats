@@ -27,11 +27,11 @@
                 <table border="0">
                   <tr>
                     <td>User Name:</td>
-                    <td><input type="text" name="user_name" autofocus /></td>
+                    <td><input type="text" name="UserName" autofocus /></td>
                   </tr>
                   <tr>
                     <td>Password:</td>
-                    <td><input type="password" name="user_pwd" /></td>
+                    <td><input type="password" name="UserPwd" /></td>
                   </tr>
                   <tr>
                     <td></td>
