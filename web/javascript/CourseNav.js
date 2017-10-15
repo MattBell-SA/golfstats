@@ -44,7 +44,7 @@ function geoLocationSucess(position) {
       position: location
   });
   google.maps.event.addListener(marker, 'click', function () {
-      infowindow.setContent("Current Location v2");
+      infowindow.setContent("Current Location");
       infowindow.open(map, this);
   });
 
