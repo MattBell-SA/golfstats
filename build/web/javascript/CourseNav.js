@@ -4,8 +4,8 @@ var position;
 var timeout;
 var lastTap = 0;
 var currLocation;
-var directionsDisplay;// = new google.maps.DirectionsRenderer();
-var directionsService;// = new google.maps.DirectionsService();
+var directionsDisplay;
+var directionsService;
 var currMarker;
 var listMarkers = [];
 
@@ -44,7 +44,7 @@ function geoLocationSucess(position) {
       position: location
   });
   google.maps.event.addListener(marker, 'click', function () {
-      infowindow.setContent("Current Location");
+      infowindow.setContent("Current Location v2");
       infowindow.open(map, this);
   });
 
@@ -81,8 +81,8 @@ function geoLocationFailure(positionError) {
 function callback(results, status, pagination) {
   var addtoarray = true;
   var placesList = document.getElementById('places');
-  if (status === google.maps.places.PlacesServiceStatus.OK) {
 
+  if (status === google.maps.places.PlacesServiceStatus.OK) {
     for (var i = 0; i < results.length; i++) {
       // check name does not already exist
         addtoarray = true;
@@ -107,6 +107,8 @@ function callback(results, status, pagination) {
       placesList.innerHTML += '<li>' + listMarkers[i].name + '</li>';
     }
 
+  } else {
+    alert('Request failed: ' + status);
   }
 }
 
@@ -123,7 +125,6 @@ function createMarker(place) {
       var tapLength = currentTime - lastTap;
 
       if (tapLength < 1800 && tapLength > 0) {
-          //window.location.href = "enterstats.jsp";
           history.go(-1);
       }
       lastTap = currentTime;
@@ -135,14 +136,12 @@ function createMarker(place) {
 
         if (currMarker == null || currMarker != marker) {
           var db = new Dexie("golfCourseName");
-          //db.version(1).stores({ golfCourse: 'id,placeName,latlng' });
           db.version(1).stores({ golfCourse: 'id,placeName' });
           db.open();
 
           db.golfCourse.put({
               id: 1
              , placeName: place.name
-              //, latlng: "\"" + place.geometry.location + "\""
           }).then(function () {
               return db.golfCourse.get(1);
           }).then(function (golfCourse) {
